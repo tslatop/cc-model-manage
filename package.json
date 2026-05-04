@@ -1,0 +1,44 @@
+{
+  "name": "cc-model-manage",
+  "version": "1.0.13",
+  "description": "A simple CLI tool to switch Claude Code AI models easily",
+  "main": "bin/cc_switch.js",
+  "bin": {
+    "ccm": "./bin/cc_switch.js",
+    "cc_switch": "./bin/cc_switch.js"
+  },
+  "scripts": {
+    "start": "node bin/cc_switch.js",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "keywords": [
+    "claude",
+    "model",
+    "switcher",
+    "cli",
+    "ai",
+    "anthropic",
+    "kimi",
+    "deepseek"
+  ],
+  "author": "Claude Code Switcher Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/cc-model-manage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/cc-model-switcher/issues"
+  },
+  "homepage": "https://github.com/yourusername/cc-model-switcher#readme",
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "axios": "^1.13.2",
+    "chalk": "^4.1.2",
+    "commander": "^9.4.1",
+    "inquirer": "^8.2.5"
+  }
+}
