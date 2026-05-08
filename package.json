@@ -1,10 +1,10 @@
 {
   "name": "cc-model-manage",
-  "version": "1.0.13",
+  "version": "1.1.0",
   "description": "A simple CLI tool to switch Claude Code AI models easily",
   "main": "bin/cc_switch.js",
   "bin": {
-    "ccm": "./bin/cc_switch.js"
+    "ccm": "bin/cc_switch.js"
   },
   "scripts": {
     "start": "node bin/cc_switch.js",
@@ -24,12 +24,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/cc-model-manage.git"
+    "url": "git+https://github.com/tslatop/cc-model-manage.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/cc-model-switcher/issues"
+    "url": "https://github.com/tslatop/cc-model-manage/issues"
   },
-  "homepage": "https://github.com/yourusername/cc-model-switcher#readme",
+  "homepage": "https://github.com/tslatop/cc-model-manage#readme",
   "engines": {
     "node": ">=12.0.0"
   },
