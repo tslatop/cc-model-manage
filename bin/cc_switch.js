@@ -10,13 +10,11 @@ const os = require('os');
 
 const program = new Command();
 
-// 获取用户主目录
-const homeDir = require('os').homedir();
+const homeDir = os.homedir();
 const configPath = path.join(homeDir, '.models.json');
 
-// 默认配置 - 使用占位符
 const defaultConfig = {
-  defaultModel: "volces", // 默认火山方舟
+  defaultModel: "volces",
   models: {
     volces: {
       description: "火山方舟",
@@ -47,28 +45,18 @@ const defaultConfig = {
   }
 };
 
-
-
-/**
- * 初始化配置文件
- * @date 2025-01-14
- */
 function initConfig() {
   if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath, JSON.stringify(defaultConfig, null, 2));
     console.log(chalk.green(`✅ 已创建配置文件: ${configPath}`));
   }
-  // 不再自动添加或更新模型，用户需通过 --add 手动添加
 }
 
-
-// 读取配置
 function readConfig() {
   try {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    // 确保配置有默认模型字段，保持向后兼容性
     if (config.defaultModel === undefined) {
-      config.defaultModel = 'kimi'; // 默认使用kimi
+      config.defaultModel = 'kimi';
     }
     return config;
   } catch (error) {
@@ -77,7 +65,6 @@ function readConfig() {
   }
 }
 
-// 保存配置
 function saveConfig(config) {
   try {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -87,7 +74,6 @@ function saveConfig(config) {
   }
 }
 
-// 列出所有模型
 function listModels() {
   const config = readConfig();
   console.log(chalk.cyan('\n📋 可用模型:'));
@@ -102,25 +88,16 @@ function listModels() {
   console.log();
 }
 
-/**
- * 检查并提示API密钥
- * @param {Object} config - 配置对象
- * @param {string} modelName - 要检查的模型名称，如果不提供则检查所有模型
- * @returns {boolean} 是否有占位符密钥
- * @date 2025-01-14
- */
 function checkApiKeys(config, modelName = null) {
   let hasPlaceholder = false;
-  
+
   if (modelName) {
-    // 只检查指定模型
     const model = config.models[modelName];
     if (model && (model.env.ANTHROPIC_AUTH_TOKEN.includes('YOUR_') || model.env.ANTHROPIC_AUTH_TOKEN === 'placeholder')) {
       console.log(chalk.yellow(`⚠️  模型 ${modelName} 需要配置API密钥`));
       hasPlaceholder = true;
     }
   } else {
-    // 检查所有模型
     Object.entries(config.models).forEach(([name, model]) => {
       if (model.env.ANTHROPIC_AUTH_TOKEN.includes('YOUR_') || model.env.ANTHROPIC_AUTH_TOKEN === 'placeholder') {
         console.log(chalk.yellow(`⚠️  模型 ${name} 需要配置API密钥`));
@@ -128,24 +105,18 @@ function checkApiKeys(config, modelName = null) {
       }
     });
   }
-  
+
   if (hasPlaceholder) {
     console.log(chalk.cyan(`\n💡 请编辑配置文件添加API密钥: ${configPath}`));
     console.log(chalk.gray('将 ANTHROPIC_AUTH_TOKEN 的值替换为你的实际API密钥'));
   }
-  
+
   return hasPlaceholder;
 }
 
-
-/**
- * 切换模型并启动Claude Code
- * @param {string} modelName - 模型名称
- * @date 2025-01-14
- */
 function switchModel(modelName) {
   const config = readConfig();
-  
+
   if (!config.models[modelName]) {
     console.log(chalk.red(`❌ 模型 "${modelName}" 不存在`));
     listModels();
@@ -153,38 +124,31 @@ function switchModel(modelName) {
   }
 
   const model = config.models[modelName];
-  
-  // 检查当前模型的API密钥
+
   if (checkApiKeys(config, modelName)) {
     process.exit(1);
   }
 
   console.log(chalk.cyan(`🔄 正在切换到模型: ${chalk.green(modelName)}`));
-  
-  // 设置环境变量并启动Claude Code
+
   const env = { ...process.env };
   Object.entries(model.env).forEach(([key, value]) => {
     env[key] = value;
   });
 
   console.log(chalk.green(`✅ 已切换到 ${modelName}，正在启动 Claude Code...`));
-  
-  // 启动Claude Code - 正确处理Windows环境
+
   const workDir = process.cwd();
   console.log(chalk.cyan(`📁 工作目录: ${workDir}`));
-  
+
   const platform = process.platform;
   let claude;
-  
+
   if (platform === 'win32') {
-    // Windows: 直接使用cwd参数设置工作目录
     const normalizedPath = path.resolve(workDir);
     console.log(chalk.gray(`规范化路径: ${normalizedPath}`));
-    
-    // 修复日期: 2025-01-14
-    // 修复内容: 使用spawn的cwd参数直接设置工作目录，避免PowerShell路径处理问题
     console.log(chalk.blue(`🚀 正在启动 Claude Code (工作目录: ${normalizedPath})`));
-    
+
     claude = spawn('npx', ['claude'], {
       stdio: 'inherit',
       env: env,
@@ -192,7 +156,6 @@ function switchModel(modelName) {
       cwd: normalizedPath
     });
   } else {
-    // macOS/Linux: 正常启动
     claude = spawn('claude', [], {
       stdio: 'inherit',
       env: env,
@@ -204,11 +167,7 @@ function switchModel(modelName) {
   claude.on('error', (error) => {
     if (error.code === 'ENOENT') {
       console.error(chalk.red('❌ Claude Code 未安装或未添加到PATH'));
-      console.log(chalk.yellow('Windows用户请确保:'));
-      console.log(chalk.yellow('1. 已安装Claude Code'));
-      console.log(chalk.yellow('2. 已安装Git Bash'));
-      console.log(chalk.yellow('3. 已将claude命令添加到系统PATH'));
-      console.log(chalk.yellow('4. 或设置环境变量 CLAUDE_CODE_GIT_BASH_PATH'));
+      console.log(chalk.yellow('请确保已安装 Claude Code'));
     } else {
       console.error(chalk.red(`❌ 启动Claude Code失败: ${error.message}`));
     }
@@ -216,17 +175,12 @@ function switchModel(modelName) {
   });
 }
 
-/**
- * 添加新模型
- * @date 2025-01-14
- */
 async function addModel() {
   console.log(chalk.cyan('🚀 开始添加新模型'));
   console.log(chalk.yellow('💡 请准备好模型的相关信息'));
 
   const config = readConfig();
 
-  // 交互式收集模型信息
   const answers = await inquirer.prompt([
     {
       type: 'input',
@@ -277,7 +231,6 @@ async function addModel() {
     }
   ]);
 
-  // 构建新模型配置
   const newModel = {
     description: answers.description,
     env: {
@@ -292,7 +245,6 @@ async function addModel() {
     }
   };
 
-  // 添加到配置
   config.models[answers.modelId] = newModel;
   saveConfig(config);
 
@@ -302,101 +254,22 @@ async function addModel() {
   console.log(chalk.green(`   描述: ${answers.description}`));
   console.log(chalk.green(`   API URL: ${answers.baseUrl}`));
   console.log(chalk.green(`   默认模型: ${answers.modelName}`));
-  console.log(chalk.yellow(`\n💡 您可以使用以下命令切换到新模型:`));
-  console.log(chalk.white(`   cc_switch ${answers.modelId}`));
-  console.log(chalk.white(`   或使用交互式选择: cc_switch -i`));
 }
 
-/**
- * 非交互式添加新模型
- * @param {Object} options - 命令行选项
- * @date 2025-01-14
- */
-async function addModelNonInteractive(options) {
-  const config = readConfig();
-
-  // 验证必填参数
-  const requiredParams = ['modelId', 'modelDescription', 'baseUrl', 'apiKey', 'modelName'];
-  const missingParams = requiredParams.filter(param => !options[param]);
-
-  if (missingParams.length > 0) {
-    console.error(chalk.red(`❌ 缺少必填参数: ${missingParams.join(', ')}`));
-    // 将驼峰式参数名转换为短横线分隔的参数名
-    const formattedParam = missingParams[0].replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
-    console.log(chalk.yellow(`💡 请使用 --${formattedParam} 参数`));
-    console.log(chalk.yellow(`   使用 --help 查看所有非交互式参数`));
-    process.exit(1);
-  }
-
-  // 验证模型ID是否已存在
-  if (config.models[options.modelId]) {
-    console.error(chalk.red(`❌ 模型ID ${options.modelId} 已存在`));
-    process.exit(1);
-  }
-
-  // 验证模型ID格式
-  if (options.modelId.includes(' ')) {
-    console.error(chalk.red(`❌ 模型ID不能包含空格`));
-    process.exit(1);
-  }
-
-  // 验证超时时间格式
-  if (options.timeout && !/^\d+$/.test(options.timeout)) {
-    console.error(chalk.red(`❌ 超时时间必须是数字`));
-    process.exit(1);
-  }
-
-  // 构建新模型配置
-  const newModel = {
-    description: options.modelDescription,
-    env: {
-      ANTHROPIC_BASE_URL: options.baseUrl,
-      ANTHROPIC_AUTH_TOKEN: options.apiKey,
-      API_TIMEOUT_MS: options.timeout || '600000',
-      ANTHROPIC_MODEL: options.modelName,
-      ANTHROPIC_SMALL_FAST_MODEL: options.smallFastModel || options.modelName,
-      ANTHROPIC_DEFAULT_SONNET_MODEL: options.modelName,
-      ANTHROPIC_DEFAULT_OPUS_MODEL: options.modelName,
-      ANTHROPIC_DEFAULT_HAIKU_MODEL: options.modelName
-    }
-  };
-
-  // 添加到配置
-  config.models[options.modelId] = newModel;
-  saveConfig(config);
-
-  console.log(chalk.green('✅ 新模型添加成功!'));
-  console.log(chalk.cyan(`\n📋 新模型信息:`));
-  console.log(chalk.green(`   模型ID: ${options.modelId}`));
-  console.log(chalk.green(`   描述: ${options.modelDescription}`));
-  console.log(chalk.green(`   API URL: ${options.baseUrl}`));
-  console.log(chalk.green(`   默认模型: ${options.modelName}`));
-  console.log(chalk.yellow(`\n💡 您可以使用以下命令切换到新模型:`));
-  console.log(chalk.white(`   cc_switch ${options.modelId}`));
-}
-
-/**
- * 删除指定模型
- * @param {string} modelId - 要删除的模型ID
- * @date 2025-01-14
- */
 async function removeModel(modelId) {
   const config = readConfig();
 
-  // 验证模型是否存在
   if (!config.models[modelId]) {
     console.error(chalk.red(`❌ 模型 ${modelId} 不存在`));
     process.exit(1);
   }
 
-  // 不能删除默认模型
   if (config.defaultModel === modelId) {
     console.error(chalk.red(`❌ 不能删除默认模型 ${modelId}`));
-    console.log(chalk.yellow(`💡 请先使用 --set-default 设置新的默认模型`));
+    console.log(chalk.yellow(`💡 请先使用 "ccm default <模型ID>" 设置新的默认模型`));
     process.exit(1);
   }
 
-  // 交互式确认
   const answer = await inquirer.prompt([
     {
       type: 'confirm',
@@ -411,54 +284,37 @@ async function removeModel(modelId) {
     process.exit(0);
   }
 
-  // 删除模型
   delete config.models[modelId];
   saveConfig(config);
 
   console.log(chalk.green(`✅ 模型 ${modelId} 已成功删除`));
 }
 
-/**
- * 设置默认模型
- * @param {string} modelId - 要设置为默认的模型ID
- * @date 2025-01-14
- */
 async function setDefaultModel(modelId) {
   const config = readConfig();
 
-  // 验证模型是否存在
   if (!config.models[modelId]) {
     console.error(chalk.red(`❌ 模型 ${modelId} 不存在`));
     process.exit(1);
   }
 
-  // 更新默认模型
   config.defaultModel = modelId;
   saveConfig(config);
 
   console.log(chalk.green(`✅ 默认模型已成功设置为 ${modelId}`));
-  console.log(chalk.yellow(`💡 现在执行 cc_switch 命令将默认使用 ${modelId}`));
 }
 
-/**
- * 编辑指定模型
- * @param {string} modelId - 要编辑的模型ID
- * @date 2025-01-14
- */
 async function editModel(modelId) {
   const config = readConfig();
   const existingModel = config.models[modelId];
 
-  // 验证模型是否存在
   if (!existingModel) {
     console.error(chalk.red(`❌ 模型 ${modelId} 不存在`));
     process.exit(1);
   }
 
-  // 获取当前模型配置
   const currentEnv = existingModel.env;
 
-  // 交互式收集更新后的信息
   const answers = await inquirer.prompt([
     {
       type: 'input',
@@ -499,7 +355,6 @@ async function editModel(modelId) {
     }
   ]);
 
-  // 更新模型配置
   existingModel.description = answers.description;
   existingModel.env = {
     ANTHROPIC_BASE_URL: answers.baseUrl,
@@ -512,22 +367,15 @@ async function editModel(modelId) {
     ANTHROPIC_DEFAULT_HAIKU_MODEL: answers.modelName
   };
 
-  // 保存配置
   saveConfig(config);
 
   console.log(chalk.green(`✅ 模型 ${modelId} 已成功更新`));
 }
 
-/**
- * 测试模型配置有效性
- * @param {string} modelId - 要测试的模型ID
- * @date 2025-01-14
- */
 async function testModel(modelId) {
   const config = readConfig();
   const model = config.models[modelId];
 
-  // 验证模型是否存在
   if (!model) {
     console.error(chalk.red(`❌ 模型 ${modelId} 不存在`));
     process.exit(1);
@@ -541,7 +389,6 @@ async function testModel(modelId) {
   console.log(chalk.gray(`超时时间: ${model.env.API_TIMEOUT_MS}ms`));
 
   try {
-    // 发送测试请求（使用Anthropic兼容的API格式）
     const response = await axios({
       method: 'POST',
       url: `${model.env.ANTHROPIC_BASE_URL}/v1/messages`,
@@ -557,40 +404,29 @@ async function testModel(modelId) {
       timeout: parseInt(model.env.API_TIMEOUT_MS)
     });
 
-    // 检查响应
     if (response.status === 200 && response.data) {
       console.log(chalk.green(`✅ 模型 ${modelId} 配置有效，API响应正常`));
 
-      // 兼容不同API响应格式
       try {
         let responseText;
 
-        // 尝试提取响应内容的多种可能格式
         if (response.data.content) {
           if (Array.isArray(response.data.content) && response.data.content[0]?.text) {
-            // Claude/Anthropic格式: content数组包含text字段
             responseText = response.data.content[0].text.trim();
           } else if (typeof response.data.content === 'string') {
-            // 简单字符串格式: content直接是文本
             responseText = response.data.content.trim();
           } else {
-            // 其他格式: 转换为JSON字符串
             responseText = JSON.stringify(response.data.content, null, 2);
           }
-        }
-        // OpenAI兼容格式
-        else if (response.data.choices && Array.isArray(response.data.choices)) {
+        } else if (response.data.choices && Array.isArray(response.data.choices)) {
           const choice = response.data.choices[0];
           responseText = choice?.message?.content?.trim() || choice?.content?.trim() || JSON.stringify(choice, null, 2);
-        }
-        // 未知格式
-        else {
+        } else {
           responseText = JSON.stringify(response.data, null, 2);
         }
 
         console.log(chalk.yellow(`💡 测试响应: ${responseText}`));
       } catch (error) {
-        // 安全回退：显示完整响应结构
         console.log(chalk.yellow(`💡 测试响应: ${JSON.stringify(response.data, null, 2)}`));
       }
     } else {
@@ -608,32 +444,21 @@ async function testModel(modelId) {
   }
 }
 
-/**
- * 交互式选择模型
- * @date 2025-01-14
- */
-
 async function updateEnv(modelId) {
   const config = readConfig();
   const model = config.models[modelId];
 
-  // 验证模型是否存在
   if (!model) {
     console.error(chalk.red(`❌ 模型 ${modelId} 不存在`));
     process.exit(1);
   }
 
-  const fs = require('fs');
-  const os = require('os');
-  const path = require('path');
   const bashrcPath = path.join(os.homedir(), '.bashrc');
 
   console.log(chalk.cyan(`🔧 正在将 ${modelId} 的环境变量写入 ~/.bashrc...`));
 
-  // 读取现有bashrc
   let bashrc = fs.readFileSync(bashrcPath, 'utf8');
 
-  // 移除旧的cc-model-manage配置
   const startMarker = '# cc-model-switcher - 模型切换器环境变量配置';
   const endMarker = '# 结束 cc-model-switcher 配置';
   const startIdx = bashrc.indexOf(startMarker);
@@ -643,7 +468,6 @@ async function updateEnv(modelId) {
     bashrc = bashrc.substring(0, startIdx) + bashrc.substring(endIdx + endMarker.length + 1);
   }
 
-  // 生成新的环境变量配置
   let envLines = `
 ${startMarker}
 # 默认模型: ${modelId} (${model.description})
@@ -657,7 +481,6 @@ ${startMarker}
   envLines += `${endMarker}
 `;
 
-  // 写入bashrc
   bashrc += envLines;
   fs.writeFileSync(bashrcPath, bashrc);
 
@@ -684,67 +507,159 @@ async function interactiveSelect() {
   switchModel(answer.model);
 }
 
+// ========== CLI 定义 ==========
 
-
-// 主程序
 program
-  .name('cc_switch')
+  .name('ccm')
   .description('Claude Code 模型切换器')
   .version(require('../package.json').version);
 
 program
-  .argument('[model]', '模型名称')
-  .option('-l, --list', '列出所有可用模型')
-  .option('-i, --interactive', '交互式选择模型')
-  .option('--add', '添加新模型（交互式）')
-  .option('--add-non-interactive', '添加新模型（非交互式）')
-  .option('--model-id <id>', '模型ID（非交互式使用）')
-  .option('--model-description <desc>', '模型描述（非交互式使用）')
-  .option('--base-url <url>', 'API Base URL（非交互式使用）')
-  .option('--api-key <key>', 'API Key（非交互式使用）')
-  .option('--model-name <name>', '默认模型名称（非交互式使用）')
-  .option('--small-fast-model <name>', '轻量模型名称（非交互式使用）')
-  .option('--timeout <ms>', 'API超时时间（非交互式使用）')
-  .option('--remove <modelId>', '删除指定模型')
-  .option('--set-default <modelId>', '设置默认模型')
-  .option('--edit <modelId>', '编辑指定模型')
-  .option('--test <modelId>', '测试模型配置有效性')
-  .option('--update-env <modelId>', '将模型环境变量写入~/.bashrc（永久生效）')
-  .action(async (model, options) => {
+  .command('list')
+  .aliases(['ls'])
+  .description('列出所有可用模型')
+  .action(() => {
     initConfig();
+    listModels();
+  });
 
-    if (options.add) {
-      await addModel();
-      return;  // 处理完立即退出
-    } else if (options.addNonInteractive) {
-      await addModelNonInteractive(options);
-      return;  // 处理完立即退出
-    } else if (options.remove) {
-      await removeModel(options.remove);
-      return;  // 处理完立即退出
-    } else if (options.setDefault) {
-      await setDefaultModel(options.setDefault);
-      return;  // 处理完立即退出 - 关键修复
-    } else if (options.edit) {
-      await editModel(options.edit);
-      return;  // 处理完立即退出
-    } else if (options.test) {
-      await testModel(options.test);
-      return;  // 处理完立即退出
-    } else if (options.list) {
-      listModels();
-      return;  // 处理完立即退出
-    } else if (options.updateEnv) {
-      await updateEnv(options.updateEnv);
-      return;  // 处理完立即退出
-    } else if (options.interactive) {
-      await interactiveSelect();
-      return;  // 处理完立即退出
-    } else if (model) {
-      switchModel(model);
-      return;  // 处理完立即退出
+program
+  .command('switch <model>')
+  .aliases(['use', 's'])
+  .description('切换到指定模型并启动 Claude Code')
+  .action((model) => {
+    initConfig();
+    switchModel(model);
+  });
+
+program
+  .command('add')
+  .description('添加新模型')
+  .option('--model-id <id>', '模型ID')
+  .option('--description <desc>', '模型描述')
+  .option('--base-url <url>', 'API Base URL')
+  .option('--api-key <key>', 'API Key')
+  .option('--model-name <name>', '模型名称')
+  .option('--small-fast-model <name>', '轻量模型名称')
+  .option('--timeout <ms>', 'API超时时间（毫秒）')
+  .action(async (options) => {
+    initConfig();
+    // 如果有任何非交互参数则走无交互模式，否则交互式
+    const isNonInteractive = options.modelId || options.description || options.baseUrl || options.apiKey || options.modelName || options.smallFastModel || options.timeout;
+    if (isNonInteractive) {
+      const missing = [];
+      if (!options.modelId) missing.push('--model-id');
+      if (!options.description) missing.push('--description');
+      if (!options.baseUrl) missing.push('--base-url');
+      if (!options.apiKey) missing.push('--api-key');
+      if (!options.modelName) missing.push('--model-name');
+      if (missing.length > 0) {
+        console.error(chalk.red(`❌ 缺少必填参数: ${missing.join(', ')}`));
+        process.exit(1);
+      }
+
+      const config = readConfig();
+
+      if (config.models[options.modelId]) {
+        console.error(chalk.red(`❌ 模型ID ${options.modelId} 已存在`));
+        process.exit(1);
+      }
+      if (options.modelId.includes(' ')) {
+        console.error(chalk.red(`❌ 模型ID不能包含空格`));
+        process.exit(1);
+      }
+      if (options.timeout && !/^\d+$/.test(options.timeout)) {
+        console.error(chalk.red(`❌ 超时时间必须是数字`));
+        process.exit(1);
+      }
+
+      const newModel = {
+        description: options.description,
+        env: {
+          ANTHROPIC_BASE_URL: options.baseUrl,
+          ANTHROPIC_AUTH_TOKEN: options.apiKey,
+          API_TIMEOUT_MS: options.timeout || '600000',
+          ANTHROPIC_MODEL: options.modelName,
+          ANTHROPIC_SMALL_FAST_MODEL: options.smallFastModel || options.modelName,
+          ANTHROPIC_DEFAULT_SONNET_MODEL: options.modelName,
+          ANTHROPIC_DEFAULT_OPUS_MODEL: options.modelName,
+          ANTHROPIC_DEFAULT_HAIKU_MODEL: options.modelName
+        }
+      };
+
+      config.models[options.modelId] = newModel;
+      saveConfig(config);
+
+      console.log(chalk.green('✅ 新模型添加成功!'));
+      console.log(chalk.cyan(`\n📋 新模型信息:`));
+      console.log(chalk.green(`   模型ID: ${options.modelId}`));
+      console.log(chalk.green(`   描述: ${options.description}`));
+      console.log(chalk.green(`   API URL: ${options.baseUrl}`));
+      console.log(chalk.green(`   默认模型: ${options.modelName}`));
     } else {
-      // 使用配置文件中的默认模型
+      await addModel();
+    }
+  });
+
+program
+  .command('remove <model>')
+  .aliases(['rm'])
+  .description('删除指定模型')
+  .action(async (model) => {
+    initConfig();
+    await removeModel(model);
+  });
+
+program
+  .command('default <model>')
+  .aliases(['set-default'])
+  .description('设置默认模型')
+  .action(async (model) => {
+    initConfig();
+    await setDefaultModel(model);
+  });
+
+program
+  .command('edit <model>')
+  .description('编辑指定模型的配置')
+  .action(async (model) => {
+    initConfig();
+    await editModel(model);
+  });
+
+program
+  .command('test <model>')
+  .description('测试模型的 API 配置有效性')
+  .action(async (model) => {
+    initConfig();
+    await testModel(model);
+  });
+
+program
+  .command('env <model>')
+  .description('将模型环境变量写入 ~/.bashrc（永久生效）')
+  .action(async (model) => {
+    initConfig();
+    await updateEnv(model);
+  });
+
+program
+  .command('interactive')
+  .aliases(['i', 'select'])
+  .description('交互式选择模型')
+  .action(async () => {
+    initConfig();
+    await interactiveSelect();
+  });
+
+// 顶层参数：不匹配子命令时，将参数当作模型名直接切换
+program
+  .arguments('[model]')
+  .action((model) => {
+    initConfig();
+    if (model) {
+      switchModel(model);
+    } else {
       const config = readConfig();
       switchModel(config.defaultModel);
     }
