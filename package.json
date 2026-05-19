@@ -2,12 +2,12 @@
   "name": "cc-model-manage",
   "version": "1.1.1",
   "description": "A simple CLI tool to switch Claude Code AI models easily",
-  "main": "bin/cc_switch.js",
+  "main": "bin/ccm.js",
   "bin": {
-    "ccm": "bin/cc_switch.js"
+    "ccm": "bin/ccm.js"
   },
   "scripts": {
-    "start": "node bin/cc_switch.js",
+    "start": "node bin/ccm.js",
     "test": "echo \"No tests specified\" && exit 0"
   },
   "keywords": [
